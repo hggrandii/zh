@@ -20,7 +20,7 @@ type RepoResponse struct {
 	DefaultBranch string `json:"default_branch"`
 }
 
-func addDependency(url string) error {
+func AddDependency(url string) error {
 	owner, repo, err := parseGitHubURL(url)
 	if err != nil {
 		return err
