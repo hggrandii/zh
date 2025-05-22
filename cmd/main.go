@@ -24,7 +24,6 @@ func main() {
 		handleNewCommand()
 		return
 	default:
-		// Pass through to zig command
 		args := os.Args[1:]
 		cmd := exec.Command("zig", args...)
 		cmd.Stdin = os.Stdin
