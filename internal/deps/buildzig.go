@@ -14,7 +14,6 @@ func addToBuildZig(dependencyName string) error {
 	}
 
 	buildZigContent := string(content)
-
 	if strings.Contains(buildZigContent, fmt.Sprintf(`"%s"`, dependencyName)) {
 		return fmt.Errorf("dependency '%s' may already exist in build.zig", dependencyName)
 	}
@@ -38,25 +37,42 @@ func injectDependency(buildZigContent, dependencyName string) (string, error) {
 	for i, line := range lines {
 		result = append(result, line)
 
-		if strings.Contains(line, "const exe_mod = b.createModule(.{") {
+		if strings.Contains(line, "const exe = b.addExecutable(.{") {
 			for j := i + 1; j < len(lines); j++ {
 				result = append(result, lines[j])
 				if strings.Contains(lines[j], "});") {
 					result = append(result, "")
-					result = append(result, fmt.Sprintf("    // Add %s dependency", dependencyName))
-					result = append(result, fmt.Sprintf(`    exe_mod.addImport("%s", b.dependency("%s", .{}).module("root"));`, dependencyName, dependencyName))
+					result = append(result, fmt.Sprintf("    // Added %s", dependencyName))
+					result = append(result, fmt.Sprintf(`    const %s_dep = b.dependency("%s", .{});`, dependencyName, dependencyName))
+					result = append(result, fmt.Sprintf(`    exe.root_module.addImport("%s", %s_dep.module("root"));`, dependencyName, dependencyName))
 
 					for k := j + 1; k < len(lines); k++ {
 						result = append(result, lines[k])
 					}
+					return strings.Join(result, "\n"), nil
+				}
+			}
+		}
 
+		if strings.Contains(line, "const lib = b.addStaticLibrary(.{") {
+			for j := i + 1; j < len(lines); j++ {
+				result = append(result, lines[j])
+				if strings.Contains(lines[j], "});") {
+					result = append(result, "")
+					result = append(result, fmt.Sprintf("    // Added %s", dependencyName))
+					result = append(result, fmt.Sprintf(`    const %s_dep = b.dependency("%s", .{});`, dependencyName, dependencyName))
+					result = append(result, fmt.Sprintf(`    lib.root_module.addImport("%s", %s_dep.module("root"));`, dependencyName, dependencyName))
+
+					for k := j + 1; k < len(lines); k++ {
+						result = append(result, lines[k])
+					}
 					return strings.Join(result, "\n"), nil
 				}
 			}
 		}
 	}
 
-	return "", fmt.Errorf("could not find exe_mod creation pattern in build.zig")
+	return "", fmt.Errorf("could not find executable or library creation pattern in build.zig")
 }
 
 func generateDependencyName(repo *RepoInfo) string {

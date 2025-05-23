@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"github.com/hggrandii/zh/internal/deps"
+	"github.com/hggrandii/zh/internal/project"
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/hggrandii/zh/internal/deps"
-	"github.com/hggrandii/zh/internal/project"
 )
+
+const VERSION = "0.1.1"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -22,6 +23,9 @@ func main() {
 		return
 	case "new":
 		handleNewCommand()
+		return
+	case "version", "--version", "-v":
+		handleVersionCommand()
 		return
 	default:
 		args := os.Args[1:]
@@ -40,6 +44,7 @@ func main() {
 }
 
 func printUsage() {
+	fmt.Fprintf(os.Stderr, "zh %s\n", VERSION)
 	fmt.Fprintln(os.Stderr, "Usage: zh [command] [arguments]")
 	fmt.Fprintln(os.Stderr, "\nCommands:")
 	fmt.Fprintln(os.Stderr, "  new [name] [options]    Create a new Zig project")
@@ -51,6 +56,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "      --github, --gh      Use GitHub (default)")
 	fmt.Fprintln(os.Stderr, "      --gitlab, --gl      Use GitLab")
 	fmt.Fprintln(os.Stderr, "      --codeberg, --cb    Use Codeberg")
+	fmt.Fprintln(os.Stderr, "  version                 Show version information")
 	fmt.Fprintln(os.Stderr, "  [any zig command]       Pass arguments directly to the zig command")
 }
 
@@ -115,5 +121,17 @@ func handleAddCommand() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to add dependency: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+func handleVersionCommand() {
+	fmt.Printf("zh %s\n", VERSION)
+
+	cmd := exec.Command("zig", "version")
+	zigVersion, err := cmd.Output()
+	if err != nil {
+		fmt.Printf("zig: (not found or error: %v)\n", err)
+	} else {
+		fmt.Printf("zig %s", string(zigVersion))
 	}
 }
