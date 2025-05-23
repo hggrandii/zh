@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -10,52 +10,9 @@ import (
 	"github.com/hggrandii/zh/internal/project"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
-	}
+const VERSION = "0.1.2"
 
-	switch os.Args[1] {
-	case "add":
-		handleAddCommand()
-		return
-	case "new":
-		handleNewCommand()
-		return
-	default:
-		// Pass through to zig command
-		args := os.Args[1:]
-		cmd := exec.Command("zig", args...)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				os.Exit(exitErr.ExitCode())
-			}
-			fmt.Fprintf(os.Stderr, "Failed to execute zig: %v\n", err)
-			os.Exit(1)
-		}
-	}
-}
-
-func printUsage() {
-	fmt.Fprintln(os.Stderr, "Usage: zh [command] [arguments]")
-	fmt.Fprintln(os.Stderr, "\nCommands:")
-	fmt.Fprintln(os.Stderr, "  new [name] [options]    Create a new Zig project")
-	fmt.Fprintln(os.Stderr, "    Options:")
-	fmt.Fprintln(os.Stderr, "      --bin               Create a binary project (default)")
-	fmt.Fprintln(os.Stderr, "      --lib               Create a library project")
-	fmt.Fprintln(os.Stderr, "  add [repo] [options]    Add a dependency")
-	fmt.Fprintln(os.Stderr, "    Options:")
-	fmt.Fprintln(os.Stderr, "      --github, --gh      Use GitHub (default)")
-	fmt.Fprintln(os.Stderr, "      --gitlab, --gl      Use GitLab")
-	fmt.Fprintln(os.Stderr, "      --codeberg, --cb    Use Codeberg")
-	fmt.Fprintln(os.Stderr, "  [any zig command]       Pass arguments directly to the zig command")
-}
-
-func handleNewCommand() {
+func HandleNewCommand() {
 	if len(os.Args) < 3 {
 		fmt.Fprintln(os.Stderr, "Usage: zh new [name] [options]")
 		fmt.Fprintln(os.Stderr, "  Options:")
@@ -87,7 +44,7 @@ func handleNewCommand() {
 	}
 }
 
-func handleAddCommand() {
+func HandleAddCommand() {
 	if len(os.Args) < 3 {
 		fmt.Fprintln(os.Stderr, "Usage: zh add [repo] [options]")
 		fmt.Fprintln(os.Stderr, "  Options:")
@@ -116,5 +73,17 @@ func handleAddCommand() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to add dependency: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+func HandleVersionCommand() {
+	fmt.Printf("zh %s\n", VERSION)
+
+	cmd := exec.Command("zig", "version")
+	zigVersion, err := cmd.Output()
+	if err != nil {
+		fmt.Printf("zig: (not found or error: %v)\n", err)
+	} else {
+		fmt.Printf("zig %s", string(zigVersion))
 	}
 }
