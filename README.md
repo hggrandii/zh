@@ -12,7 +12,7 @@ A simple hobby package manager and build tool wrapper for Zig.
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/zh
+git clone https://github.com/hggrandii/zh
 cd zh
 zig build
 # Copy zig-out/bin/zh to somewhere in your PATH
