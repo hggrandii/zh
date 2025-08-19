@@ -1,1 +1,4 @@
-zh
+.zig-cache
+test1
+zig-out/bin
+deployment.md
