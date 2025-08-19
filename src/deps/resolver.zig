@@ -45,6 +45,63 @@ pub fn parseRepoURL(allocator: std.mem.Allocator, url: []const u8, provider: typ
 }
 
 pub fn getLatestCommitInfo(allocator: std.mem.Allocator, repo: *types.RepoInfo) !void {
+    if (getLatestStableRelease(allocator, repo)) {
+        return;
+    } else |_| {
+        std.debug.print("// Could not find a stable release, using latest commit\n", .{});
+        try getLatestCommitFromBranch(allocator, repo);
+    }
+}
+
+fn getLatestStableRelease(allocator: std.mem.Allocator, repo: *types.RepoInfo) !void {
+    const url = switch (repo.provider) {
+        .github => try std.fmt.allocPrint(allocator, "https://api.github.com/repos/{s}/{s}/releases/latest", .{ repo.owner, repo.repo }),
+        .gitlab => try std.fmt.allocPrint(allocator, "https://gitlab.com/api/v4/projects/{s}%2F{s}/releases", .{ repo.owner, repo.repo }),
+        .codeberg => try std.fmt.allocPrint(allocator, "https://codeberg.org/api/v1/repos/{s}/{s}/releases", .{ repo.owner, repo.repo }),
+    };
+    defer allocator.free(url);
+
+    const response = makeHttpRequest(allocator, url) catch {
+        return error.NoStableRelease;
+    };
+    defer allocator.free(response);
+
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, response, .{}) catch {
+        return error.NoStableRelease;
+    };
+    defer parsed.deinit();
+
+    switch (repo.provider) {
+        .github => {
+            const tag_name = parsed.value.object.get("tag_name") orelse return error.NoStableRelease;
+            const prerelease = parsed.value.object.get("prerelease") orelse return error.NoStableRelease;
+
+            if (prerelease.bool) return error.NoStableRelease;
+
+            repo.commit_hash = try allocator.dupe(u8, tag_name.string);
+        },
+        .gitlab, .codeberg => {
+            const releases = parsed.value.array;
+            if (releases.items.len == 0) return error.NoStableRelease;
+
+            for (releases.items) |release| {
+                const tag_name = release.object.get("tag_name") orelse continue;
+
+                if (repo.provider == .gitlab) {
+                    if (release.object.get("upcoming_release")) |upcoming| {
+                        if (upcoming.bool) continue;
+                    }
+                }
+
+                repo.commit_hash = try allocator.dupe(u8, tag_name.string);
+                return;
+            }
+            return error.NoStableRelease;
+        },
+    }
+}
+
+fn getLatestCommitFromBranch(allocator: std.mem.Allocator, repo: *types.RepoInfo) !void {
     try getDefaultBranch(allocator, repo);
 
     const url = switch (repo.provider) {
@@ -95,11 +152,13 @@ fn makeHttpRequest(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
+    const uri = try std.Uri.parse(url);
+
     const header_buffer = try allocator.alloc(u8, 8192);
     defer allocator.free(header_buffer);
-
-    const uri = try std.Uri.parse(url);
-    var req = try client.open(.GET, uri, .{ .server_header_buffer = header_buffer });
+    var req = try client.open(.GET, uri, .{
+        .server_header_buffer = header_buffer,
+    });
     defer req.deinit();
 
     try req.send();

@@ -19,9 +19,20 @@ pub fn fetchDependency(allocator: std.mem.Allocator, repo: *types.RepoInfo) !voi
 }
 
 fn generateArchiveURL(allocator: std.mem.Allocator, repo: *types.RepoInfo) ![]u8 {
+    const is_tag = std.mem.startsWith(u8, repo.commit_hash.?, "v") or
+        std.mem.indexOf(u8, repo.commit_hash.?, ".") != null;
+
     return switch (repo.provider) {
-        .github => try std.fmt.allocPrint(allocator, "https://github.com/{s}/{s}/archive/{s}.tar.gz", .{ repo.owner, repo.repo, repo.commit_hash.? }),
-        .gitlab => try std.fmt.allocPrint(allocator, "https://gitlab.com/{s}/{s}/-/archive/{s}/{s}-{s}.tar.gz", .{ repo.owner, repo.repo, repo.commit_hash.?, repo.repo, repo.commit_hash.? }),
+        .github => if (is_tag)
+            try std.fmt.allocPrint(allocator, "https://github.com/{s}/{s}/archive/refs/tags/{s}.tar.gz", .{ repo.owner, repo.repo, repo.commit_hash.? })
+        else
+            try std.fmt.allocPrint(allocator, "https://github.com/{s}/{s}/archive/{s}.tar.gz", .{ repo.owner, repo.repo, repo.commit_hash.? }),
+
+        .gitlab => if (is_tag)
+            try std.fmt.allocPrint(allocator, "https://gitlab.com/{s}/{s}/-/archive/{s}/{s}-{s}.tar.gz", .{ repo.owner, repo.repo, repo.commit_hash.?, repo.repo, repo.commit_hash.? })
+        else
+            try std.fmt.allocPrint(allocator, "https://gitlab.com/{s}/{s}/-/archive/{s}/{s}-{s}.tar.gz", .{ repo.owner, repo.repo, repo.commit_hash.?, repo.repo, repo.commit_hash.? }),
+
         .codeberg => try std.fmt.allocPrint(allocator, "https://codeberg.org/{s}/{s}/archive/{s}.tar.gz", .{ repo.owner, repo.repo, repo.commit_hash.? }),
     };
 }
