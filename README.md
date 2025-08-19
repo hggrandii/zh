@@ -1,127 +1,72 @@
-# zh - A Cargo-like Package Manager for Zig
+# zh
 
-`zh` is a wrapper around the Zig toolchain that provides Cargo-like functionality for creating projects and managing dependencies.
+A simple hobby package manager and build tool wrapper for Zig.
 
-## Features
+## What it does
 
-- **Easy project creation**: `zh new myproject --bin` or `zh new mylib --lib`
-- **Dependency management**: `zh add owner/repo` to add dependencies from GitHub, GitLab, or Codeberg
-- **Zig passthrough**: Any unrecognized command is passed directly to `zig`
-- **Clean templates**: Minimal, focused project templates without excessive comments
+- Creates new Zig projects with sensible defaults
+- Adds dependencies from GitHub/GitLab/Codeberg with automatic module detection
+- Wraps `zig build` commands for convenience
+- Prefers stable releases over latest commits when available
 
 ## Installation
 
-### Using Go (Recommended)
-
 ```bash
-go install github.com/hggrandii/zh@latest
-```
-
-### From Source
-
-```bash
-git clone https://github.com/hggrandii/zh.git
+git clone https://github.com/yourusername/zh
 cd zh
-go install .
+zig build
+# Copy zig-out/bin/zh to somewhere in your PATH
 ```
-
-## Requirements
-
-- Go 1.19+ (for installation)
-- Zig 0.14.0+ (for project creation and building)
 
 ## Usage
 
 ### Create a new project
-
 ```bash
-# Create a binary project (default)
-zh new myapp
-zh new myapp --bin
-
-# Create a library project
-zh new mylib --lib
+zh new myproject          # Creates a binary project
+zh new mylib --lib        # Creates a library project
 ```
 
 ### Add dependencies
-
 ```bash
-# Add from GitHub (default)
-zh add mitchellh/libxev
-zh add owner/repo --github
-
-# Add from GitLab
-zh add owner/repo --gitlab
-
-# Add from Codeberg
-zh add owner/repo --codeberg
+zh add zigzap/zap         # Adds latest stable release
+zh add user/repo --gitlab # From GitLab
+zh add user/repo --cb     # From Codeberg
 ```
 
-### Build and run (passthrough to zig)
+### Build and run
+```bash
+zh build                  # Same as 'zig build'
+zh run                    # Same as 'zig run'
+zh test                   # Same as 'zig test'
+# ... any other zig command
+```
+
+### Version info
+```bash
+zh version               # Shows zh and zig versions
+```
+
+## Features
+
+- **Smart dependency resolution**: Automatically detects the correct module name by parsing the package's build files
+- **Stable releases first**: Prefers tagged releases over latest commits when available
+- **Simple project templates**: Clean, minimal project structure
+- **Multiple git providers**: GitHub, GitLab, and Codeberg support
+
+## Example
 
 ```bash
+zh new myapp
+cd myapp
+zh add zigzap/zap
 zh build
-zh build run
-zh test
-zh --help
+zh run
 ```
 
-### Show version information
+## Notes
 
-```bash
-zh version
-```
+This is a hobby project. It's not trying to replace the official Zig package manager or compete with serious tools. It just makes some common workflows a bit more convenient.
 
-## Project Structure
+## Version
 
-When you create a new project, `zh` generates a clean, minimal structure:
-
-### Binary Project (`zh new myapp --bin`)
-
-```
-myapp/
-├── build.zig          # Clean build script
-├── build.zig.zon      # Dependencies manifest
-└── src/
-    └── main.zig       # Simple "Hello, world!"
-```
-
-### Library Project (`zh new mylib --lib`)
-
-```
-mylib/
-├── build.zig          # Library build script
-├── build.zig.zon      # Dependencies manifest
-└── src/
-    └── root.zig       # Simple add function with test
-```
-
-## Comparison with Cargo
-
-| Cargo | zh | Description |
-|-------|----|----|
-| `cargo new myapp` | `zh new myapp --bin` | Create binary project |
-| `cargo new mylib --lib` | `zh new mylib --lib` | Create library project |
-| `cargo add dep` | `zh add owner/repo` | Add dependency |
-| `cargo build` | `zh build` | Build project |
-| `cargo run` | `zh build run` | Run project |
-| `cargo test` | `zh test` | Run tests |
-
-## Why zh?
-
-Zig's package manager is powerful but can be verbose and complex for simple use cases. `zh` provides:
-
-- **Familiar workflow** for developers coming from Rust/Cargo
-- **Clean project templates** without excessive boilerplate
-- **Simplified dependency management** with automatic build.zig integration
-- **Transparent zig passthrough** - you can use any zig command
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests.
-
-
-## Acknowledgments
-
-- Inspired by Rust's Cargo package manager
-- Built on top of Zig's excellent build system and package manager
+Current version: 0.2.0
