@@ -10,14 +10,18 @@ pub fn addDependency(allocator: std.mem.Allocator, url: []const u8, provider: ty
     defer repo.deinit();
 
     try resolver.getLatestCommitInfo(allocator, &repo);
+
+    const module_name = try resolver.getPackageModuleName(allocator, &repo);
+    defer allocator.free(module_name);
+
     try fetcher.fetchDependency(allocator, &repo);
 
     const dependency_name = repo.repo;
-    buildzig.addToBuildZig(allocator, dependency_name) catch |err| {
+    buildzig.addToBuildZig(allocator, dependency_name, module_name) catch |err| {
         print("Warning: Failed to add dependency to build.zig: {}\n", .{err});
         print("You may need to manually add the dependency to your build.zig\n", .{});
         print("Add this line after your exe/lib creation:\n", .{});
-        print("    exe.root_module.addImport(\"{s}\", b.dependency(\"{s}\", .{{}}).module(\"root\"));\n", .{ dependency_name, dependency_name });
+        print("    exe.root_module.addImport(\"{s}\", b.dependency(\"{s}\", .{{}}).module(\"{s}\"));\n", .{ dependency_name, dependency_name, module_name });
         return;
     };
 

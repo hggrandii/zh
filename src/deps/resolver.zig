@@ -53,6 +53,88 @@ pub fn getLatestCommitInfo(allocator: std.mem.Allocator, repo: *types.RepoInfo) 
     }
 }
 
+pub fn getPackageModuleName(allocator: std.mem.Allocator, repo: *types.RepoInfo) ![]const u8 {
+    if (getModuleNameFromBuildZigZon(allocator, repo)) |module_name| {
+        return module_name;
+    } else |_| {
+        if (getModuleNameFromBuildZig(allocator, repo)) |module_name| {
+            return module_name;
+        } else |_| {
+            std.debug.print("// Could not determine module name, trying package name\n", .{});
+            return try allocator.dupe(u8, repo.repo);
+        }
+    }
+}
+
+fn getModuleNameFromBuildZigZon(allocator: std.mem.Allocator, repo: *types.RepoInfo) ![]const u8 {
+    const raw_url = try std.fmt.allocPrint(allocator, "https://raw.githubusercontent.com/{s}/{s}/{s}/build.zig.zon", .{ repo.owner, repo.repo, repo.commit_hash.? });
+    defer allocator.free(raw_url);
+
+    const response = makeHttpRequest(allocator, raw_url) catch {
+        return error.FileNotFound;
+    };
+    defer allocator.free(response);
+
+    var lines = std.mem.splitScalar(u8, response, '\n');
+    var in_modules_section = false;
+
+    while (lines.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, " \t");
+
+        if (std.mem.indexOf(u8, trimmed, ".modules = .{")) |_| {
+            in_modules_section = true;
+            continue;
+        }
+
+        if (in_modules_section) {
+            if (std.mem.indexOf(u8, trimmed, "},")) |_| {
+                break;
+            }
+
+            if (std.mem.startsWith(u8, trimmed, ".")) {
+                if (std.mem.indexOf(u8, trimmed, " = .{")) |eq_pos| {
+                    const module_name = trimmed[1..eq_pos];
+                    return try allocator.dupe(u8, module_name);
+                }
+            }
+        }
+    }
+
+    return error.ModuleNotFound;
+}
+
+fn getModuleNameFromBuildZig(allocator: std.mem.Allocator, repo: *types.RepoInfo) ![]const u8 {
+    const raw_url = try std.fmt.allocPrint(allocator, "https://raw.githubusercontent.com/{s}/{s}/{s}/build.zig", .{ repo.owner, repo.repo, repo.commit_hash.? });
+    defer allocator.free(raw_url);
+
+    const response = makeHttpRequest(allocator, raw_url) catch {
+        return error.FileNotFound;
+    };
+    defer allocator.free(response);
+
+    var lines = std.mem.splitScalar(u8, response, '\n');
+
+    while (lines.next()) |line| {
+        if (std.mem.indexOf(u8, line, "b.addModule(\"")) |start| {
+            const quote_start = start + 13;
+            if (std.mem.indexOf(u8, line[quote_start..], "\"")) |quote_end| {
+                const module_name = line[quote_start .. quote_start + quote_end];
+                return try allocator.dupe(u8, module_name);
+            }
+        }
+
+        if (std.mem.indexOf(u8, line, ".addImport(\"")) |start| {
+            const quote_start = start + 12;
+            if (std.mem.indexOf(u8, line[quote_start..], "\"")) |quote_end| {
+                const module_name = line[quote_start .. quote_start + quote_end];
+                return try allocator.dupe(u8, module_name);
+            }
+        }
+    }
+
+    return error.ModuleNotFound;
+}
+
 fn getLatestStableRelease(allocator: std.mem.Allocator, repo: *types.RepoInfo) !void {
     const url = switch (repo.provider) {
         .github => try std.fmt.allocPrint(allocator, "https://api.github.com/repos/{s}/{s}/releases/latest", .{ repo.owner, repo.repo }),
@@ -152,10 +234,10 @@ fn makeHttpRequest(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    const uri = try std.Uri.parse(url);
-
     const header_buffer = try allocator.alloc(u8, 8192);
     defer allocator.free(header_buffer);
+
+    const uri = try std.Uri.parse(url);
     var req = try client.open(.GET, uri, .{
         .server_header_buffer = header_buffer,
     });
