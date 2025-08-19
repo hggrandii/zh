@@ -11,11 +11,21 @@ A simple hobby package manager and build tool wrapper for Zig.
 
 ## Installation
 
+### Option 1: Build from source
 ```bash
 git clone https://github.com/hggrandii/zh
 cd zh
-zig build
-# Copy zig-out/bin/zh to somewhere in your PATH
+zig build -Doptimize=ReleaseSafe
+sudo cp zig-out/bin/zh /usr/local/bin/
+```
+
+### Option 2: User install (no sudo)
+```bash
+git clone https://github.com/hggrandii/zh
+cd zh
+zig build -Doptimize=ReleaseSafe
+mkdir -p ~/.local/bin
+cp zig-out/bin/zh ~/.local/bin/
 ```
 
 ## Usage
