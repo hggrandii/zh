@@ -16,8 +16,8 @@ pub fn parseRepoURL(allocator: std.mem.Allocator, url: []const u8, provider: typ
         const repo = parts.next() orelse return error.InvalidFormat;
 
         return types.RepoInfo{
-            .owner = owner,
-            .repo = repo,
+            .owner = try allocator.dupe(u8, owner),
+            .repo = try allocator.dupe(u8, repo),
             .provider = provider,
             .allocator = allocator,
         };
@@ -37,8 +37,8 @@ pub fn parseRepoURL(allocator: std.mem.Allocator, url: []const u8, provider: typ
     }
 
     return types.RepoInfo{
-        .owner = owner,
-        .repo = repo,
+        .owner = try allocator.dupe(u8, owner),
+        .repo = try allocator.dupe(u8, repo),
         .provider = provider,
         .allocator = allocator,
     };
@@ -160,7 +160,9 @@ fn getLatestStableRelease(allocator: std.mem.Allocator, repo: *types.RepoInfo) !
 
             if (prerelease.bool) return error.NoStableRelease;
 
-            repo.commit_hash = try allocator.dupe(u8, tag_name.string);
+            repo.latest_release = try repo.allocator.dupe(u8, tag_name.string);
+            repo.commit_hash = try repo.allocator.dupe(u8, tag_name.string);
+            repo.is_release = true;
         },
         .gitlab, .codeberg => {
             const releases = parsed.value.array;
@@ -175,7 +177,9 @@ fn getLatestStableRelease(allocator: std.mem.Allocator, repo: *types.RepoInfo) !
                     }
                 }
 
-                repo.commit_hash = try allocator.dupe(u8, tag_name.string);
+                repo.latest_release = try repo.allocator.dupe(u8, tag_name.string);
+                repo.commit_hash = try repo.allocator.dupe(u8, tag_name.string);
+                repo.is_release = true;
                 return;
             }
             return error.NoStableRelease;
@@ -209,7 +213,8 @@ fn getLatestCommitFromBranch(allocator: std.mem.Allocator, repo: *types.RepoInfo
         .gitlab, .codeberg => commit_obj.get("id").?.string,
     };
 
-    repo.commit_hash = try allocator.dupe(u8, commit_hash);
+    repo.commit_hash = try repo.allocator.dupe(u8, commit_hash);
+    repo.is_release = false;
 }
 
 fn getDefaultBranch(allocator: std.mem.Allocator, repo: *types.RepoInfo) !void {
@@ -227,19 +232,17 @@ fn getDefaultBranch(allocator: std.mem.Allocator, repo: *types.RepoInfo) !void {
     defer parsed.deinit();
 
     const default_branch = parsed.value.object.get("default_branch").?.string;
-    repo.default_branch = try allocator.dupe(u8, default_branch);
+    repo.default_branch = try repo.allocator.dupe(u8, default_branch);
 }
 
 fn makeHttpRequest(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    const header_buffer = try allocator.alloc(u8, 8192);
-    defer allocator.free(header_buffer);
-
+    var header_buffer: [8192]u8 = undefined;
     const uri = try std.Uri.parse(url);
     var req = try client.open(.GET, uri, .{
-        .server_header_buffer = header_buffer,
+        .server_header_buffer = &header_buffer,
     });
     defer req.deinit();
 
