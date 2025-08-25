@@ -5,7 +5,7 @@ const deps = @import("../deps/deps.zig");
 const project = @import("../project/project.zig");
 const types = @import("../types.zig");
 
-const VERSION = "0.2.2";
+const VERSION = "0.2.3";
 
 pub const Command = enum {
     add,
@@ -104,6 +104,7 @@ pub fn handleVersionCommand(allocator: std.mem.Allocator) !void {
     var stdout_buffer: [1024]u8 = undefined;
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const stdout = &stdout_writer.interface;
+
     try stdout.print("zh {s}\n", .{VERSION});
 
     var child = std.process.Child.init(&[_][]const u8{ "zig", "version" }, allocator);
@@ -121,6 +122,8 @@ pub fn handleVersionCommand(allocator: std.mem.Allocator) !void {
     } else {
         try stdout.print("zig: (not found or error)\n", .{});
     }
+
+    try stdout.flush();
 }
 
 pub fn passthroughToZig(allocator: std.mem.Allocator, args: [][:0]u8) void {
