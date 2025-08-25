@@ -85,9 +85,11 @@ fn generateBinaryBuildZig(allocator: std.mem.Allocator, project_name: []const u8
         \\
         \\    const exe = b.addExecutable(.{{
         \\        .name = "{s}",
-        \\        .root_source_file = b.path("src/main.zig"),
-        \\        .target = target,
-        \\        .optimize = optimize,
+        \\        .root_module = b.createModule(.{{
+        \\            .root_source_file = b.path("src/main.zig"),
+        \\            .target = target,
+        \\            .optimize = optimize,
+        \\      }}),
         \\    }});
         \\
         \\    b.installArtifact(exe);
@@ -103,9 +105,11 @@ fn generateBinaryBuildZig(allocator: std.mem.Allocator, project_name: []const u8
         \\    run_step.dependOn(&run_cmd.step);
         \\
         \\    const unit_tests = b.addTest(.{{
-        \\        .root_source_file = b.path("src/main.zig"),
-        \\        .target = target,
-        \\        .optimize = optimize,
+        \\        .root_module = b.createModule(.{{
+        \\            .root_source_file = b.path("src/main.zig"),
+        \\            .target = target,
+        \\            .optimize = optimize,
+        \\      }}),
         \\    }});
         \\
         \\    const run_unit_tests = b.addRunArtifact(unit_tests);
@@ -124,19 +128,23 @@ fn generateLibraryBuildZig(allocator: std.mem.Allocator, project_name: []const u
         \\    const target = b.standardTargetOptions(.{{}});
         \\    const optimize = b.standardOptimizeOption(.{{}});
         \\
-        \\    const lib = b.addStaticLibrary(.{{
+        \\    const lib = b.addLibrary(.{{
         \\        .name = "{s}",
-        \\        .root_source_file = b.path("src/root.zig"),
-        \\        .target = target,
-        \\        .optimize = optimize,
+        \\        .root_module = b.createModule(.{{
+        \\            .root_source_file = b.path("src/root.zig"),
+        \\            .target = target,
+        \\            .optimize = optimize,
+        \\      }}),
         \\    }});
         \\
         \\    b.installArtifact(lib);
         \\
         \\    const unit_tests = b.addTest(.{{
-        \\        .root_source_file = b.path("src/root.zig"),
-        \\        .target = target,
-        \\        .optimize = optimize,
+        \\        .root_module = b.createModule(.{{
+        \\            .root_source_file = b.path("src/root.zig"),
+        \\            .target = target,
+        \\            .optimize = optimize,
+        \\      }}),
         \\    }});
         \\
         \\    const run_unit_tests = b.addRunArtifact(unit_tests);

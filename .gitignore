@@ -2,3 +2,4 @@
 test1
 zig-out/bin
 deployment.md
+zls.json
