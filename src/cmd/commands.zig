@@ -5,7 +5,7 @@ const deps = @import("../deps/deps.zig");
 const project = @import("../project/project.zig");
 const types = @import("../types.zig");
 
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 
 pub const Command = enum {
     add,
@@ -101,7 +101,9 @@ pub fn handleAddCommand(allocator: std.mem.Allocator, args: [][:0]u8) !void {
 }
 
 pub fn handleVersionCommand(allocator: std.mem.Allocator) !void {
-    const stdout = std.io.getStdOut().writer();
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+    const stdout = &stdout_writer.interface;
     try stdout.print("zh {s}\n", .{VERSION});
 
     var child = std.process.Child.init(&[_][]const u8{ "zig", "version" }, allocator);

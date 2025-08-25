@@ -239,17 +239,18 @@ fn makeHttpRequest(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    var header_buffer: [8192]u8 = undefined;
-    const uri = try std.Uri.parse(url);
-    var req = try client.open(.GET, uri, .{
-        .server_header_buffer = &header_buffer,
+    var response_writer = std.Io.Writer.Allocating.init(allocator);
+    defer response_writer.deinit();
+
+    const result = try client.fetch(.{
+        .location = .{ .url = url },
+        .method = .GET,
+        .response_writer = &response_writer.writer,
     });
-    defer req.deinit();
 
-    try req.send();
-    try req.finish();
-    try req.wait();
+    if (result.status.class() != .success) {
+        return error.HttpRequestFailed;
+    }
 
-    const body = try req.reader().readAllAlloc(allocator, 1024 * 1024);
-    return body;
+    return try response_writer.toOwnedSlice();
 }

@@ -20,60 +20,60 @@ pub fn addToBuildZig(allocator: std.mem.Allocator, dependency_name: []const u8, 
 
 fn injectDependency(allocator: std.mem.Allocator, content: []const u8, dependency_name: []const u8, module_name: []const u8) ![]u8 {
     var lines = std.mem.splitScalar(u8, content, '\n');
-    var result = ArrayList([]const u8).init(allocator);
-    defer result.deinit();
+    var result: ArrayList([]const u8) = .empty;
+    defer result.deinit(allocator);
 
-    var allocated_strings = ArrayList([]const u8).init(allocator);
+    var allocated_strings: ArrayList([]const u8) = .empty;
     defer {
         for (allocated_strings.items) |str| {
             allocator.free(str);
         }
-        allocated_strings.deinit();
+        allocated_strings.deinit(allocator);
     }
 
     const exe_pattern = "const exe = b.addExecutable(.{";
-    const lib_pattern = "const lib = b.addStaticLibrary(.{";
+    const lib_pattern = "const lib = b.addLibrary(.{";
 
     while (lines.next()) |line| {
-        try result.append(line);
+        try result.append(allocator, line);
 
         if (std.mem.indexOf(u8, line, exe_pattern)) |_| {
             while (lines.next()) |next_line| {
-                try result.append(next_line);
+                try result.append(allocator, next_line);
                 if (std.mem.indexOf(u8, next_line, "});")) |_| {
-                    try result.append("");
+                    try result.append(allocator, "");
 
                     const comment = try std.fmt.allocPrint(allocator, "    // Added {s}", .{dependency_name});
-                    try allocated_strings.append(comment);
-                    try result.append(comment);
+                    try allocated_strings.append(allocator, comment);
+                    try result.append(allocator, comment);
 
                     const dep_line = try std.fmt.allocPrint(allocator, "    const {s}_dep = b.dependency(\"{s}\", .{{}});", .{ dependency_name, dependency_name });
-                    try allocated_strings.append(dep_line);
-                    try result.append(dep_line);
+                    try allocated_strings.append(allocator, dep_line);
+                    try result.append(allocator, dep_line);
 
                     const import_line = try std.fmt.allocPrint(allocator, "    exe.root_module.addImport(\"{s}\", {s}_dep.module(\"{s}\"));", .{ dependency_name, dependency_name, module_name });
-                    try allocated_strings.append(import_line);
-                    try result.append(import_line);
+                    try allocated_strings.append(allocator, import_line);
+                    try result.append(allocator, import_line);
                     break;
                 }
             }
         } else if (std.mem.indexOf(u8, line, lib_pattern)) |_| {
             while (lines.next()) |next_line| {
-                try result.append(next_line);
+                try result.append(allocator, next_line);
                 if (std.mem.indexOf(u8, next_line, "});")) |_| {
-                    try result.append("");
+                    try result.append(allocator, "");
 
                     const comment = try std.fmt.allocPrint(allocator, "    // Added {s}", .{dependency_name});
-                    try allocated_strings.append(comment);
-                    try result.append(comment);
+                    try allocated_strings.append(allocator, comment);
+                    try result.append(allocator, comment);
 
                     const dep_line = try std.fmt.allocPrint(allocator, "    const {s}_dep = b.dependency(\"{s}\", .{{}});", .{ dependency_name, dependency_name });
-                    try allocated_strings.append(dep_line);
-                    try result.append(dep_line);
+                    try allocated_strings.append(allocator, dep_line);
+                    try result.append(allocator, dep_line);
 
                     const import_line = try std.fmt.allocPrint(allocator, "    lib.root_module.addImport(\"{s}\", {s}_dep.module(\"{s}\"));", .{ dependency_name, dependency_name, module_name });
-                    try allocated_strings.append(import_line);
-                    try result.append(import_line);
+                    try allocated_strings.append(allocator, import_line);
+                    try result.append(allocator, import_line);
                     break;
                 }
             }
