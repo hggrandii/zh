@@ -76,7 +76,3 @@ zh run
 ## Notes
 
 This is a hobby project. It's not trying to replace the official Zig package manager or compete with serious tools. It just makes some common workflows a bit more convenient.
-
-## Version
-
-Current version: 0.2.0
