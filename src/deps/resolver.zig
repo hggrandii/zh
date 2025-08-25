@@ -239,11 +239,8 @@ fn makeHttpRequest(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    var response_buffer: std.ArrayList(u8) = .empty;
-    defer response_buffer.deinit(allocator);
-
-    var response_writer = std.io.Writer.Allocating.fromArrayList(allocator, &response_buffer);
-    defer response_buffer = response_writer.toArrayList();
+    var response_writer = std.Io.Writer.Allocating.init(allocator);
+    defer response_writer.deinit();
 
     const result = try client.fetch(.{
         .location = .{ .url = url },
@@ -255,5 +252,5 @@ fn makeHttpRequest(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
         return error.HttpRequestFailed;
     }
 
-    return try response_buffer.toOwnedSlice(allocator);
+    return try response_writer.toOwnedSlice();
 }
