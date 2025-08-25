@@ -5,7 +5,7 @@ const deps = @import("../deps/deps.zig");
 const project = @import("../project/project.zig");
 const types = @import("../types.zig");
 
-const VERSION = "0.2.2";
+const VERSION = "0.2.3";
 
 pub const Command = enum {
     add,
