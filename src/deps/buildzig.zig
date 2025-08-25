@@ -32,7 +32,7 @@ fn injectDependency(allocator: std.mem.Allocator, content: []const u8, dependenc
     }
 
     const exe_pattern = "const exe = b.addExecutable(.{";
-    const lib_pattern = "const lib = b.addStaticLibrary(.{";
+    const lib_pattern = "const lib = b.addLibrary(.{";
 
     while (lines.next()) |line| {
         try result.append(allocator, line);
